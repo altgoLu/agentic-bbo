@@ -13,6 +13,8 @@ dependencies = [
   "cma>=4.0.0",
   "matplotlib>=3.9.0",
   "numpy>=2.2.0",
+  "pandas>=2.2.0",
+  "scikit-learn>=1.6.0",
 ]
 
 [project.optional-dependencies]
@@ -33,7 +35,7 @@ include-package-data = true
 include = ["bbo*"]
 
 [tool.setuptools.package-data]
-bbo = ["task_descriptions/**/*.md"]
+bbo = ["task_descriptions/**/*.md", "tasks/scientific/data/*.csv"]
 
 [tool.pytest.ini_options]
 addopts = "-q"
