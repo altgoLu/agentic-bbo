@@ -8,8 +8,17 @@ from pathlib import Path
 from typing import Any
 
 from .algorithms import ALGORITHM_REGISTRY, create_algorithm
-from .core import ExperimentConfig, Experimenter, JsonlMetricLogger
-from .tasks import SYNTHETIC_PROBLEM_REGISTRY, SURROGATE_TASK_IDS, create_demo_task, create_surrogate_task
+from .core import (
+    ExperimentConfig,
+    Experimenter,
+    JsonlMetricLogger,
+    Landscape2DPlotter,
+    ObjectiveDistributionPlotter,
+    OptimizationTracePlotter,
+    OptimizerComparisonPlotter,
+    Task,
+)
+from .tasks import ALL_TASK_NAMES, create_task
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -30,23 +39,8 @@ def run_single_experiment(
     surrogate_path: str | Path | None = None,
     knobs_json_path: str | Path | None = None,
 ) -> dict[str, Any]:
-    # 兼容 synthetic demo 和 surrogate(knob) 任务：
-    # - synthetic: 支持 noise_std
-    # - surrogate: 支持 surrogate_path / knobs_json_path（以及环境变量覆盖）
-    if task_name in SYNTHETIC_PROBLEM_REGISTRY:
-        task = create_demo_task(task_name, max_evaluations=max_evaluations, seed=seed, noise_std=noise_std)
-    elif task_name in SURROGATE_TASK_IDS:
-        task = create_surrogate_task(
-            task_name,
-            max_evaluations=max_evaluations,
-            seed=seed,
-            surrogate_path=str(surrogate_path) if surrogate_path is not None else None,
-            knobs_json_path=str(knobs_json_path) if knobs_json_path is not None else None,
-        )
-    else:
-        known = ", ".join(sorted((*SYNTHETIC_PROBLEM_REGISTRY.keys(), *SURROGATE_TASK_IDS)))
-        raise ValueError(f"Unknown task `{task_name}`. Known tasks: {known}")
-
+    task = create_task(task_name, max_evaluations=max_evaluations, seed=seed, noise_std=noise_std)
+    _require_algorithm_support(task, algorithm_name)
     run_dir = _allocate_run_dir(results_root / task_name / algorithm_name / f"seed_{seed}", resume=resume)
     results_jsonl = run_dir / "trials.jsonl"
 
@@ -103,6 +97,9 @@ def run_demo_suite(
     popsize: int | None = 6,
     resume: bool = False,
 ) -> dict[str, Any]:
+    task = create_task(task_name, max_evaluations=random_evaluations, seed=seed)
+    _require_algorithm_support(task, "random_search")
+    _require_algorithm_support(task, "pycma")
     random_summary = run_single_experiment(
         task_name=task_name,
         algorithm_name="random_search",
@@ -123,6 +120,14 @@ def run_demo_suite(
     )
 
     comparison_dir = _allocate_run_dir(results_root / task_name / "suite" / f"seed_{seed}", resume=resume)
+    comparison_plot = generate_comparison_plot(
+        task=task,
+        histories={
+            "random_search": JsonlMetricLogger(Path(random_summary["results_jsonl"])).load_records(),
+            "pycma": JsonlMetricLogger(Path(pycma_summary["results_jsonl"])).load_records(),
+        },
+        output_dir=comparison_dir / "plots",
+    )
     suite_summary = {
         "task_name": task_name,
         "seed": seed,
@@ -131,6 +136,78 @@ def run_demo_suite(
     }
     (comparison_dir / "suite_summary.json").write_text(json.dumps(suite_summary, indent=2, sort_keys=True), encoding="utf-8")
     return suite_summary
+
+
+def generate_visualizations(
+    task: Task,
+    logger: JsonlMetricLogger,
+    output_dir: Path,
+    *,
+    algorithm_label: str,
+) -> list[Path]:
+    records = logger.load_records()
+    if not records:
+        return []
+    output_dir.mkdir(parents=True, exist_ok=True)
+    objective_name = task.spec.primary_objective.name
+    direction = task.spec.primary_objective.direction
+    artifacts = [
+        OptimizationTracePlotter().plot(
+            records,
+            objective_name=objective_name,
+            direction=direction,
+            output_path=output_dir / "trace.png",
+            title=f"{task.spec.metadata['display_name']} - {algorithm_label} trace",
+        ).path,
+        ObjectiveDistributionPlotter().plot(
+            records,
+            objective_name=objective_name,
+            output_path=output_dir / "distribution.png",
+            title=f"{task.spec.metadata['display_name']} - {algorithm_label} distribution",
+        ).path,
+    ]
+    if int(task.spec.metadata.get("dimension", 0)) == 2 and hasattr(task, "surface_grid"):
+        artifacts.append(
+            Landscape2DPlotter().plot(
+                task,
+                records,
+                objective_name=objective_name,
+                output_path=output_dir / "landscape.png",
+                title=f"{task.spec.metadata['display_name']} - sampled landscape",
+                resolution=int(task.spec.metadata.get("plot_resolution", 180)),
+            ).path
+        )
+    return artifacts
+
+
+def generate_comparison_plot(
+    *,
+    task: Task,
+    histories: dict[str, list],
+    output_dir: Path,
+) -> Path:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    artifact = OptimizerComparisonPlotter().plot(
+        histories,
+        objective_name=task.spec.primary_objective.name,
+        direction=task.spec.primary_objective.direction,
+        output_path=output_dir / "comparison.png",
+        title=f"{task.spec.metadata['display_name']} - optimizer comparison",
+    )
+    return artifact.path
+
+
+def _require_algorithm_support(task: Task, algorithm_name: str) -> None:
+    algorithm_spec = ALGORITHM_REGISTRY[algorithm_name]
+    if not algorithm_spec.numeric_only:
+        return
+    try:
+        task.spec.search_space.numeric_bounds()
+    except TypeError as exc:
+        raise ValueError(
+            f"Algorithm `{algorithm_name}` only supports fully numeric search spaces; "
+            f"task `{task.spec.name}` includes categorical parameters."
+        ) from exc
 
 
 def _allocate_run_dir(base_dir: Path, *, resume: bool) -> Path:
@@ -147,14 +224,13 @@ def _allocate_run_dir(base_dir: Path, *, resume: bool) -> Path:
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Run synthetic and surrogate demos for the agentic BBO benchmark core.")
-    all_tasks = tuple(sorted((*SYNTHETIC_PROBLEM_REGISTRY.keys(), *SURROGATE_TASK_IDS)))
-    parser.add_argument("--task", default="branin_demo", choices=all_tasks)
+    parser = argparse.ArgumentParser(description="Run demos for the agentic BBO benchmark core.")
+    parser.add_argument("--task", default="branin_demo", choices=sorted(ALL_TASK_NAMES))
     parser.add_argument(
         "--algorithm",
         default="suite",
-        choices=["suite", *sorted({name for name in ALGORITHM_REGISTRY if name in {"random_search", "pycma"}})],
-        help="Which demo to run. `suite` runs both random_search and pycma (JSONL + summaries only).",
+        choices=["suite", *sorted(ALGORITHM_REGISTRY)],
+        help="Which demo to run. `suite` runs both algorithms and a comparison plot.",
     )
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--max-evaluations", type=int, default=None)
