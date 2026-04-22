@@ -3,7 +3,13 @@
 from __future__ import annotations
 
 from ..core import Task
+from .database.cli_support import (
+    DATABASE_TASK_NAMES,
+    create_database_task_for_registry,
+    database_registry_entries,
+)
 from .scientific import SCIENTIFIC_TASK_REGISTRY, create_scientific_task
+from .surrogate import SURROGATE_BENCHMARKS
 from .synthetic import (
     BRANIN_DEFINITION,
     SPHERE_DEFINITION,
@@ -19,13 +25,17 @@ SYNTHETIC_PROBLEM_REGISTRY: dict[str, SyntheticFunctionDefinition] = {
 TASK_REGISTRY: dict[str, str] = {
     **{name: "synthetic" for name in SYNTHETIC_PROBLEM_REGISTRY},
     **{name: "scientific" for name in SCIENTIFIC_TASK_REGISTRY},
+    **database_registry_entries(),
 }
 ALL_TASK_NAMES: tuple[str, ...] = tuple(sorted(TASK_REGISTRY))
+
+SURROGATE_TASK_IDS: tuple[str, ...] = tuple(sorted(SURROGATE_BENCHMARKS))
 
 TASK_FAMILIES: dict[str, tuple[str, ...]] = {
     "scientific": tuple(sorted(SCIENTIFIC_TASK_REGISTRY)),
     "synthetic": tuple(sorted(SYNTHETIC_PROBLEM_REGISTRY)),
     "surrogate": SURROGATE_TASK_IDS,
+    "database": tuple(sorted(DATABASE_TASK_NAMES)),
 }
 
 
@@ -59,6 +69,14 @@ def create_demo_task(
             seed=seed,
             **kwargs,
         )
+    if problem in DATABASE_TASK_NAMES:
+        return create_database_task_for_registry(
+            problem,
+            max_evaluations=max_evaluations,
+            seed=seed,
+            noise_std=noise_std,
+            **kwargs,
+        )
     available = ", ".join(ALL_TASK_NAMES)
     raise ValueError(f"Unknown task `{problem}`. Available: {available}")
 
@@ -89,6 +107,7 @@ def get_scientific_task(name: str) -> str:
 
 __all__ = [
     "ALL_TASK_NAMES",
+    "SURROGATE_TASK_IDS",
     "SCIENTIFIC_TASK_REGISTRY",
     "SYNTHETIC_PROBLEM_REGISTRY",
     "TASK_FAMILIES",

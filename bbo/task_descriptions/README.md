@@ -57,5 +57,6 @@ The benchmark loader ignores `*.zh.md` and `*.en.md` files so the runtime task c
 - `bbo/task_descriptions/sphere_demo/`: lightweight sanity-check task
 - `bbo/task_descriptions/collaborator_problem_demo/`: a more complete collaborator-facing packaging example
 - `bbo/task_descriptions/_template/`: copyable scaffold for new tasks
+- **MariaDB HTTP / sysbench (eight tasks):** directories named `knob_http_mariadb_sysbench_<workload>_<5|all>/` where `<workload>` is `read_only`, `write_only`, `read_write`, or `point_select`, and `<5|all>` is the SHAP top-5 knob JSON or the full ~197-knob list. Each includes English docs plus `*.zh.md` companions. Rebuild the image in `bbo/tasks/database/docker/` after changing the evaluator.
 
 Legacy directories such as `bbo/task_descriptions/autoresearch_train/` are retained only for provenance and are not the recommended schema.

@@ -57,5 +57,6 @@ bbo/task_descriptions/<task_name>/
 - `bbo/task_descriptions/sphere_demo/`：轻量的 sanity-check 任务
 - `bbo/task_descriptions/collaborator_problem_demo/`：更完整的协作者封装示例
 - `bbo/task_descriptions/_template/`：可直接复制的新任务模板
+- **MariaDB HTTP / sysbench（八个子任务）：**目录名形如 `knob_http_mariadb_sysbench_<workload>_<5|all>/`，其中 `<workload>` 为 `read_only`、`write_only`、`read_write`、`point_select`，`<5|all>` 分别对应 SHAP top-5 旋钮 JSON 与全量约 197 维旋钮。每个目录含完整英文说明及对应 `*.zh.md`。若修改 `bbo/tasks/database/docker/` 内评估服务，需重建镜像。
 
 像 `bbo/task_descriptions/autoresearch_train/` 这样的遗留目录目前只作为历史材料保留，不再是推荐 schema。

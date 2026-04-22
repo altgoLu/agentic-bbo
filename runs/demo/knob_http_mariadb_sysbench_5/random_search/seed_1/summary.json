@@ -1,0 +1,48 @@
+{
+  "algorithm_name": "random_search",
+  "best_primary_objective": 860.12,
+  "description_fingerprint": "860818ff5a733e2d",
+  "incumbents": [
+    {
+      "config": {
+        "innodb_doublewrite": 0.1859062658947177,
+        "innodb_thread_concurrency": 0.6422943629324456,
+        "max_heap_table_size": 0.8375779756625729,
+        "query_prealloc_size": 0.5564543226524334,
+        "tmp_table_size": 0.021489705265908876
+      },
+      "metadata": {
+        "algorithm": "random_search"
+      },
+      "objectives": {
+        "throughput": 860.12
+      },
+      "score": 860.12,
+      "trial_id": 7
+    }
+  ],
+  "logger_summary": {
+    "algorithm": "random_search",
+    "best_objectives": {
+      "throughput": 860.12
+    },
+    "best_primary_objective": 860.12,
+    "best_trial_id": 7,
+    "description_fingerprint": "860818ff5a733e2d",
+    "failed_trials": 0,
+    "invalid_trials": 0,
+    "path": "/nas1/zyj/Agentbbo/runs/demo/knob_http_mariadb_sysbench_5/random_search/seed_1/trials.jsonl",
+    "seed": 1,
+    "successful_trials": 8,
+    "task_name": "knob_http_mariadb_sysbench_5",
+    "total_eval_time": 160.9969191676937,
+    "total_trials": 8
+  },
+  "n_completed": 8,
+  "results_jsonl": "/nas1/zyj/Agentbbo/runs/demo/knob_http_mariadb_sysbench_5/random_search/seed_1/trials.jsonl",
+  "seed": 1,
+  "stop_reason": "task_budget",
+  "task_name": "knob_http_mariadb_sysbench_5",
+  "total_eval_time": 160.9969191676937,
+  "trial_count": 8
+}
