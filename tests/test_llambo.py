@@ -8,7 +8,8 @@ from urllib import error as urllib_error
 import pytest
 
 from bbo.algorithms import ALGORITHM_REGISTRY, LlamboAlgorithm
-from bbo.algorithms.agentic.llambo import (
+from bbo.algorithms.agentic.llambo import LlamboAlgorithm as CompatLlamboAlgorithm
+from bbo.algorithms.llm_based.llambo import (
     CandidateGenerationRequest,
     ObservedPoint,
     OpenAICompatibleLlamboBackend,
@@ -65,8 +66,9 @@ def test_llambo_is_registered_and_cli_visible() -> None:
     algorithm_action = next(action for action in parser._actions if action.dest == "algorithm")
 
     assert "llambo" in ALGORITHM_REGISTRY
-    assert ALGORITHM_REGISTRY["llambo"].family == "agentic"
+    assert ALGORITHM_REGISTRY["llambo"].family == "llm_based"
     assert ALGORITHM_REGISTRY["llambo"].numeric_only is False
+    assert CompatLlamboAlgorithm is LlamboAlgorithm
     assert "llambo" in algorithm_action.choices
     assert parser.parse_args(["--algorithm", "llambo"]).algorithm == "llambo"
     parsed = parser.parse_args(

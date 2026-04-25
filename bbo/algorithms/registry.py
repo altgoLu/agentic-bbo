@@ -6,7 +6,8 @@ from dataclasses import dataclass
 from typing import Any, Callable
 
 from ..core.algo import Algorithm
-from .agentic import LlamboAlgorithm, OproAlgorithm, PabloAlgorithm
+from .agentic import PabloAlgorithm
+from .llm_based import LlamboAlgorithm, OproAlgorithm
 from .model_based import OptunaTpeAlgorithm, Pfns4BoAlgorithm
 from .traditional import PyCmaAlgorithm, RandomSearchAlgorithm
 
@@ -57,12 +58,12 @@ ALGORITHM_REGISTRY: dict[str, AlgorithmSpec] = {
     "llambo": AlgorithmSpec(
         factory=LlamboAlgorithm,
         description="LLAMBO-style prompt optimizer with pluggable chat backends and an offline heuristic mode.",
-        family="agentic",
+        family="llm_based",
     ),
     "opro": AlgorithmSpec(
         factory=OproAlgorithm,
         description="OPRO-style prompt optimizer over prior configuration/objective pairs.",
-        family="agentic",
+        family="llm_based",
     ),
     "pablo": AlgorithmSpec(
         factory=PabloAlgorithm,

@@ -6,7 +6,8 @@ from pathlib import Path
 import pytest
 
 from bbo.algorithms import ALGORITHM_REGISTRY, OproAlgorithm
-from bbo.algorithms.agentic.opro import (
+from bbo.algorithms.agentic.opro import OproAlgorithm as CompatOproAlgorithm
+from bbo.algorithms.llm_based.opro import (
     OpenAICompatibleOproBackend,
     OproGenerationRequest,
 )
@@ -61,8 +62,9 @@ def test_opro_is_registered_and_cli_visible() -> None:
     algorithm_action = next(action for action in parser._actions if action.dest == "algorithm")
 
     assert "opro" in ALGORITHM_REGISTRY
-    assert ALGORITHM_REGISTRY["opro"].family == "agentic"
+    assert ALGORITHM_REGISTRY["opro"].family == "llm_based"
     assert ALGORITHM_REGISTRY["opro"].numeric_only is False
+    assert CompatOproAlgorithm is OproAlgorithm
     assert "opro" in algorithm_action.choices
     assert parser.parse_args(["--algorithm", "opro"]).algorithm == "opro"
 
