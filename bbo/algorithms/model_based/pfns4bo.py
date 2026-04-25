@@ -6,7 +6,14 @@ from typing import Any
 
 import numpy as np
 
-from ...core import ExternalOptimizerAdapter, ObjectiveDirection, TrialObservation, TrialSuggestion
+from ...core import (
+    ContinuousSearchSpaceConverter,
+    ExternalOptimizerAdapter,
+    ObjectiveDirection,
+    TrialObservation,
+    TrialSuggestion,
+    build_continuous_converter,
+)
 from ...tasks.scientific.molecule import MOLECULE_TASK_NAME
 from ...tasks.scientific.oer import OER_TASK_NAME
 from .pfns4bo_encoding import EncodedCandidatePool, build_pool_candidates
@@ -58,6 +65,7 @@ class Pfns4BoAlgorithm(ExternalOptimizerAdapter):
         self._pool: EncodedCandidatePool | None = None
         self._continuous_model: Any | None = None
         self._pool_model: Any | None = None
+        self._continuous_converter: ContinuousSearchSpaceConverter | None = None
 
     @property
     def name(self) -> str:
@@ -90,6 +98,7 @@ class Pfns4BoAlgorithm(ExternalOptimizerAdapter):
         self._pool = None
         self._continuous_model = None
         self._pool_model = None
+        self._continuous_converter = None
 
         if self._backend_name == "pool":
             self._pool = build_pool_candidates(task_spec, seed=self._seed, pool_size=self.pool_size)
@@ -102,11 +111,20 @@ class Pfns4BoAlgorithm(ExternalOptimizerAdapter):
                 )
         else:
             self._continuous_model = load_torch_model(self.model_info.model_path)
+            try:
+                task_spec.search_space.numeric_bounds()
+            except TypeError:
+                self._continuous_converter = build_continuous_converter(task_spec.search_space, strategy="onehot")
             capacity = model_feature_capacity(self._continuous_model)
-            if capacity is not None and len(task_spec.search_space) > capacity:
+            feature_count = (
+                len(self._continuous_converter.feature_names)
+                if self._continuous_converter is not None
+                else len(task_spec.search_space)
+            )
+            if capacity is not None and feature_count > capacity:
                 raise ValueError(
                     f"PFNs model `{self.model_name}` supports at most {capacity} numeric features, "
-                    f"but task `{task_spec.name}` exposes {len(task_spec.search_space)}."
+                    f"but task `{task_spec.name}` exposes {feature_count}."
                 )
 
     def ask(self) -> TrialSuggestion:
@@ -123,10 +141,12 @@ class Pfns4BoAlgorithm(ExternalOptimizerAdapter):
     def _ask_continuous(self) -> TrialSuggestion:
         assert self._primary_name is not None
         search_space = self.require_search_space()
+        converter = self._continuous_converter
+        api_config = build_numeric_api_config(search_space) if converter is None else converter.continuous_api_config()
 
         with deterministic_seed(self._seed + len(self._history)):
             optimizer = ContinuousPfnsOptimizer(
-                build_numeric_api_config(search_space),
+                api_config,
                 self._require_continuous_model(),
                 minimize=self._primary_direction == ObjectiveDirection.MINIMIZE,
                 device=self._device,
@@ -150,15 +170,24 @@ class Pfns4BoAlgorithm(ExternalOptimizerAdapter):
                     direction=self._primary_direction,
                     failure_penalty=self.failure_penalty,
                 )
-                optimizer.observe([dict(observation.suggestion.config)], np.asarray([value], dtype=float))
+                observed_config = (
+                    dict(observation.suggestion.config)
+                    if converter is None
+                    else converter.encode_feature_config(observation.suggestion.config)
+                )
+                optimizer.observe([observed_config], np.asarray([value], dtype=float))
             suggestion = optimizer.suggest(1)[0]
 
-        config = search_space.coerce_config(dict(suggestion), use_defaults=False)
+        if converter is None:
+            config = search_space.coerce_config(dict(suggestion), use_defaults=False)
+        else:
+            config = converter.decode_feature_config(dict(suggestion), clip=True)
         return TrialSuggestion(
             config=config,
             metadata={
                 **self._common_metadata(),
                 "pfns_backend": "continuous",
+                "pfns_categorical_to_continuous": None if converter is None else converter.strategy_name,
                 "pfns_fixed_initial_guess": 0.5,
             },
         )
@@ -229,13 +258,6 @@ class Pfns4BoAlgorithm(ExternalOptimizerAdapter):
     def _select_backend(self, task_name: str) -> str:
         if task_name in POOL_BACKEND_TASKS:
             return "pool"
-        try:
-            self.require_search_space().numeric_bounds()
-        except TypeError as exc:
-            raise ValueError(
-                "Pfns4BoAlgorithm only supports fully numeric tasks via the continuous backend, "
-                "plus fixed pool-based routing for `oer_demo` and `molecule_qed_demo`."
-            ) from exc
         return "continuous"
 
     def _common_metadata(self) -> dict[str, Any]:

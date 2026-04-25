@@ -3,10 +3,25 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
+import contextlib
 import pytest
 
 import bbo.run as run_module
+import bbo.algorithms.model_based.pfns4bo as pfns4bo_module
 from bbo.algorithms import ALGORITHM_REGISTRY
+from bbo.algorithms.model_based.pfns4bo import Pfns4BoAlgorithm
+from bbo.core import (
+    CategoricalParam,
+    EvaluationResult,
+    FloatParam,
+    IntParam,
+    ObjectiveDirection,
+    ObjectiveSpec,
+    SearchSpace,
+    TaskSpec,
+    TrialObservation,
+    TrialSuggestion,
+)
 from bbo.run import build_arg_parser, run_single_experiment
 
 
@@ -47,7 +62,12 @@ def test_run_single_experiment_forwards_pfns_kwargs_without_runtime_dependency(
     knobs_json_path = tmp_path / "knobs.json"
     captured: dict[str, object] = {}
 
-    fake_task = SimpleNamespace(spec=SimpleNamespace(name="branin_demo"))
+    fake_task = SimpleNamespace(
+        spec=SimpleNamespace(
+            name="branin_demo",
+            search_space=SimpleNamespace(numeric_bounds=lambda: None),
+        )
+    )
 
     def fake_create_task(task_name: str, **kwargs: object) -> object:
         captured["task_name"] = task_name
@@ -124,3 +144,77 @@ def test_run_single_experiment_forwards_pfns_kwargs_without_runtime_dependency(
     assert summary["trial_count"] == 1
     assert "plot_paths" not in summary
     assert Path(summary["results_jsonl"]).with_name("summary.json").exists()
+
+
+@pytest.mark.unit
+def test_pfns4bo_continuous_backend_uses_onehot_converter_for_mixed_space(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    class FakeOptimizer:
+        def __init__(self, api_config: dict[str, object], model: object, **_: object) -> None:
+            captured["api_config"] = api_config
+
+        def observe(self, configs: list[dict[str, float]], values) -> None:
+            captured.setdefault("observations", []).append((configs, values.tolist()))
+
+        def suggest(self, count: int) -> list[dict[str, float]]:
+            assert count == 1
+            return [
+                {
+                    "lr": 0.02,
+                    "depth": 5.0,
+                    "activation::relu": 0.1,
+                    "activation::gelu": 0.9,
+                    "activation::tanh": 0.0,
+                }
+            ]
+
+    task_spec = TaskSpec(
+        name="mixed_pfns_demo",
+        search_space=SearchSpace(
+            [
+                FloatParam("lr", low=1e-4, high=1e-1, log=True, default=1e-2),
+                IntParam("depth", low=2, high=8, default=4),
+                CategoricalParam("activation", choices=("relu", "gelu", "tanh"), default="relu"),
+            ]
+        ),
+        objectives=(ObjectiveSpec("loss", ObjectiveDirection.MINIMIZE),),
+        max_evaluations=6,
+    )
+
+    monkeypatch.setattr(pfns4bo_module, "select_pfns_device", lambda requested: "cpu:0")
+    monkeypatch.setattr(
+        pfns4bo_module,
+        "resolve_pfns_model",
+        lambda model_name: SimpleNamespace(
+            model_name=model_name,
+            model_path=Path("/tmp/fake_pfns_model.pt"),
+            download_status="model_already_present",
+            existed_before=True,
+        ),
+    )
+    monkeypatch.setattr(pfns4bo_module, "load_torch_model", lambda path: object())
+    monkeypatch.setattr(pfns4bo_module, "model_feature_capacity", lambda model: 32)
+    monkeypatch.setattr(pfns4bo_module, "ContinuousPfnsOptimizer", FakeOptimizer)
+    monkeypatch.setattr(pfns4bo_module, "deterministic_seed", lambda seed: contextlib.nullcontext())
+
+    algorithm = Pfns4BoAlgorithm(device="cpu:0")
+    algorithm.setup(task_spec, seed=11)
+    algorithm.tell(
+        TrialObservation.from_evaluation(
+            TrialSuggestion(config={"lr": 0.01, "depth": 4, "activation": "relu"}, trial_id=0),
+            EvaluationResult(objectives={"loss": 4.25}),
+        )
+    )
+
+    suggestion = algorithm.ask()
+
+    assert suggestion.config == {"lr": 0.02, "depth": 5, "activation": "gelu"}
+    assert suggestion.metadata["pfns_categorical_to_continuous"] == "onehot"
+    assert "activation::gelu" in captured["api_config"]
+    observations = captured["observations"]
+    observed_config = observations[0][0][0]
+    assert observed_config["activation::relu"] == pytest.approx(1.0)
+    assert observed_config["activation::gelu"] == pytest.approx(0.0)
