@@ -1,6 +1,16 @@
 """Task packages and registries."""
 
+from .bboplace import (
+    BBOPLACE_DEFAULT_DEFINITION,
+    BBOPLACE_TASK_KEY,
+    BBOPlaceDefinition,
+    BBOPlaceTask,
+    BBOPlaceTaskConfig,
+    create_bboplace_task,
+    default_bboplace_definition,
+)
 from .registry import (
+    ALL_DEMO_TASK_NAMES,
     ALL_TASK_NAMES,
     HTTP_SURROGATE_TASK_IDS,
     SCIENTIFIC_TASK_REGISTRY,
@@ -55,8 +65,11 @@ from .synthetic import (
 )
 
 __all__ = [
+    "ALL_DEMO_TASK_NAMES",
     "ALL_TASK_NAMES",
     "BH_TASK_NAME",
+    "BBOPLACE_DEFAULT_DEFINITION",
+    "BBOPLACE_TASK_KEY",
     "BRANIN_DEFINITION",
     "GUACAMOL_QED_TASK_NAME",
     "HEA_COMPONENTS",
@@ -74,6 +87,9 @@ __all__ = [
     "OerTask",
     "OerTaskConfig",
     "SPHERE_DEFINITION",
+    "BBOPlaceDefinition",
+    "BBOPlaceTask",
+    "BBOPlaceTaskConfig",
     "SCIENTIFIC_TASK_REGISTRY",
     "SURROGATE_TASK_IDS",
     "SYNTHETIC_PROBLEM_REGISTRY",
@@ -88,8 +104,10 @@ __all__ = [
     "SyntheticFunctionDefinition",
     "SyntheticFunctionTask",
     "SyntheticFunctionTaskConfig",
-    "create_bh_task",
+    "create_bboplace_task",
     "create_demo_task",
+    "default_bboplace_definition",
+    "create_bh_task",
     "create_guacamol_qed_task",
     "create_hea_task",
     "create_her_task",

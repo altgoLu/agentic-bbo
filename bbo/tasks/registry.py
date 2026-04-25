@@ -20,6 +20,7 @@ from .dbtune.cli_offline_surrogate import (
     inproc_surrogate_registry_entries,
 )
 from .dbtune.http_surrogate_specs import HTTP_SURROGATE_TASK_IDS
+from .bboplace import BBOPLACE_TASK_KEY, create_bboplace_task
 from .scientific import SCIENTIFIC_TASK_REGISTRY, create_scientific_task
 from .synthetic import (
     BRANIN_DEFINITION,
@@ -39,6 +40,7 @@ TASK_REGISTRY: dict[str, str] = {
     **database_registry_entries(),
     **inproc_surrogate_registry_entries(),
     **http_surrogate_registry_entries(),
+    BBOPLACE_TASK_KEY: "bboplace",
 }
 ALL_TASK_NAMES: tuple[str, ...] = tuple(sorted(TASK_REGISTRY))
 
@@ -50,7 +52,12 @@ TASK_FAMILIES: dict[str, tuple[str, ...]] = {
     "surrogate": tuple(sorted(INPROC_SURROGATE_TASK_NAMES)),
     "database": tuple(sorted(DATABASE_TASK_NAMES)),
     "http_surrogate": tuple(sorted(HTTP_SURROGATE_TASK_NAMES)),
+    "bboplace": (BBOPLACE_TASK_KEY,),
 }
+
+ALL_DEMO_TASK_NAMES: tuple[str, ...] = tuple(
+    sorted([*SYNTHETIC_PROBLEM_REGISTRY.keys(), BBOPLACE_TASK_KEY]),
+)
 
 
 def get_synthetic_problem(name: str) -> SyntheticFunctionDefinition:
@@ -107,6 +114,12 @@ def create_demo_task(
             noise_std=noise_std,
             **kwargs,
         )
+    if problem == BBOPLACE_TASK_KEY:
+        return create_bboplace_task(
+            max_evaluations=max_evaluations,
+            seed=seed,
+            **kwargs,
+        )
     available = ", ".join(ALL_TASK_NAMES)
     raise ValueError(f"Unknown task `{problem}`. Available: {available}")
 
@@ -136,6 +149,8 @@ def get_scientific_task(name: str) -> str:
 
 
 __all__ = [
+    "ALL_DEMO_TASK_NAMES",
+    "BBOPLACE_TASK_KEY",
     "ALL_TASK_NAMES",
     "HTTP_SURROGATE_TASK_IDS",
     "SURROGATE_TASK_IDS",

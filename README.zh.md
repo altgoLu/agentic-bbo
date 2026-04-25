@@ -67,6 +67,7 @@
 任务按家族组织；详情可参见 `bbo/tasks/dbtune/README.md` 等包内说明。
 
 - `bbo/tasks/synthetic/`：合成玩具目标（`branin.py`、`sphere.py`、`base.py`）
+- `bbo/tasks/bboplace/`：HTTP 驱动的 BBOPlace benchmark 任务（`task.py`）
 - `bbo/tasks/scientific/`：表格 / 科学计算类 BO 教程任务（`registry.py`、各任务模块、`data/` 资源）
 - `bbo/tasks/dbtune/`：数据库 knob 调优（离线 sklearn surrogate、HTTP MariaDB/sysbench、可选 HTTP surrogate；含 `assets/`、`registry.py`、`docker_mariadb/`、`docker_surrogate/`）
 
@@ -75,7 +76,7 @@
 这里存放 benchmark 上下文所需的标准化任务文档。
 当前仓库包含：
 
-- `branin_demo` 和 `sphere_demo` 的可执行 benchmark 描述
+- `branin_demo`、`sphere_demo` 和 `bboplace_bench` 的可执行 benchmark 描述
 - 一个面向协作者的任务封装示例
 - 一个可复用模板
 - 中英文双语文档副本
@@ -147,6 +148,21 @@ uv run python -m bbo.run \
   --max-evaluations 36 \
   --sigma-fraction 0.18 \
   --popsize 6
+```
+
+### BBOPlace HTTP 任务
+
+先启动公开发布的 evaluator service：
+
+```bash
+docker pull gaozhixuan/bboplace-bench
+docker run --rm -p 8080:8080 gaozhixuan/bboplace-bench
+```
+
+然后在本仓库里执行一个快速 smoke test：
+
+```bash
+uv run python -m bbo.run --algorithm random_search --task bboplace_bench --max-evaluations 1
 ```
 
 Optuna TPE 的公开算法名是 `optuna_tpe`，并且支持 mixed/categorical search space：
@@ -241,4 +257,5 @@ uv run python -m bbo.run --algorithm optuna_tpe --task molecule_qed_demo --max-e
 
 - `branin_demo`：二维 synthetic benchmark，适合可视化和优化器比较
 - `sphere_demo`：凸型 synthetic benchmark，适合 smoke test 与 replay/resume 验证
+- `bboplace_bench`：通过 HTTP 接入 BBOPlace-Bench MGO evaluator 的 macro-placement benchmark
 - `collaborator_problem_demo`：偏文档化的示例，用来展示如何封装一个更真实的 benchmark 问题

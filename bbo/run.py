@@ -326,7 +326,7 @@ def _allocate_run_dir(base_dir: Path, *, resume: bool) -> Path:
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Run demos for the agentic BBO benchmark core.")
+    parser = argparse.ArgumentParser(description="Run tasks for the agentic BBO benchmark core.")
     parser.add_argument("--task", default="branin_demo", choices=sorted(ALL_TASK_NAMES))
     parser.add_argument(
         "--algorithm",

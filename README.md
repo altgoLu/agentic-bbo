@@ -67,6 +67,7 @@ Current family:
 Task implementations are grouped by family (see also `bbo/tasks/scientific/` and `bbo/tasks/dbtune/README.md`).
 
 - `bbo/tasks/synthetic/` — toy synthetic objectives (`branin.py`, `sphere.py`, `base.py`)
+- `bbo/tasks/bboplace/` — HTTP-backed BBOPlace benchmark task (`task.py`)
 - `bbo/tasks/scientific/` — tabular / scientific BO tutorial tasks (`registry.py` + per-task modules, `data/` assets)
 - `bbo/tasks/dbtune/` — database knob tuning: offline sklearn surrogates, HTTP MariaDB/sysbench evaluators, optional HTTP surrogate servers (`assets/`, `registry.py`, `docker_mariadb/`, `docker_surrogate/`)
 
@@ -75,7 +76,7 @@ Task implementations are grouped by family (see also `bbo/tasks/scientific/` and
 Standardized task packaging for benchmark context.
 The current repository includes:
 
-- runnable benchmark descriptions for `branin_demo` and `sphere_demo`
+- runnable benchmark descriptions for `branin_demo`, `sphere_demo`, and `bboplace_bench`
 - a collaborator-facing packaging example
 - a reusable template
 - bilingual documentation companions
@@ -147,6 +148,21 @@ uv run python -m bbo.run \
   --max-evaluations 36 \
   --sigma-fraction 0.18 \
   --popsize 6
+```
+
+### BBOPlace HTTP task
+
+Start the published evaluator service first:
+
+```bash
+docker pull gaozhixuan/bboplace-bench
+docker run --rm -p 8080:8080 gaozhixuan/bboplace-bench
+```
+
+Then run a quick smoke test from this repo:
+
+```bash
+uv run python -m bbo.run --algorithm random_search --task bboplace_bench --max-evaluations 1
 ```
 
 Optuna TPE uses the public algorithm name `optuna_tpe` and supports mixed/categorical search spaces:
@@ -245,4 +261,5 @@ uv run python -m bbo.run --algorithm optuna_tpe --task molecule_qed_demo --max-e
 
 - `branin_demo`: two-dimensional synthetic benchmark for visualization and optimizer comparisons
 - `sphere_demo`: convex synthetic benchmark for smoke tests and replay/resume validation
+- `bboplace_bench`: HTTP-backed macro-placement benchmark adapter for BBOPlace-Bench MGO evaluation
 - `collaborator_problem_demo`: documentation-focused example showing how to package a realistic benchmark problem
