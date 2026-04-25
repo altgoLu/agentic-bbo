@@ -50,6 +50,9 @@ pfns4bo = [
   "scipy>=1.1",
   "torch>=1.9.0",
 ]
+pablo = [
+  "openai>=1.0",
+]
 interop = [
   "ConfigSpace>=1.2.0",
 ]
