@@ -53,6 +53,16 @@ pfns4bo = [
 pablo = [
   "openai>=1.0",
 ]
+nanobot = [
+  "nanobot-ai",
+]
+claude-code = [
+  "claude-agent-sdk>=0.1.0",
+]
+general-agent = [
+  "claude-agent-sdk>=0.1.0",
+  "nanobot-ai",
+]
 interop = [
   "ConfigSpace>=1.2.0",
 ]

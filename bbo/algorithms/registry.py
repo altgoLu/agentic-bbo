@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any, Callable
 
 from ..core.algo import Algorithm
-from .agentic import PabloAlgorithm
+from .agentic import ClaudeCodeBboAlgorithm, NanobotBboAlgorithm, PabloAlgorithm
 from .llm_based import LlamboAlgorithm, OproAlgorithm
 from .model_based import OptunaTpeAlgorithm, Pfns4BoAlgorithm
 from .traditional import PyCmaAlgorithm, RandomSearchAlgorithm
@@ -77,6 +77,31 @@ ALGORITHM_REGISTRY: dict[str, AlgorithmSpec] = {
     "palbo": AlgorithmSpec(
         factory=PabloAlgorithm,
         description="Alias for pablo.",
+        family="agentic",
+    ),
+    "agentic_nanobot": AlgorithmSpec(
+        factory=NanobotBboAlgorithm,
+        description="General-agent BBO optimizer backed by the Nanobot CLI agent.",
+        family="agentic",
+    ),
+    "nanobot": AlgorithmSpec(
+        factory=NanobotBboAlgorithm,
+        description="Alias for agentic_nanobot.",
+        family="agentic",
+    ),
+    "agentic_claude_code": AlgorithmSpec(
+        factory=ClaudeCodeBboAlgorithm,
+        description="General-agent BBO optimizer backed by Claude Code.",
+        family="agentic",
+    ),
+    "claude_code": AlgorithmSpec(
+        factory=ClaudeCodeBboAlgorithm,
+        description="Alias for agentic_claude_code.",
+        family="agentic",
+    ),
+    "claude-code": AlgorithmSpec(
+        factory=ClaudeCodeBboAlgorithm,
+        description="Alias for agentic_claude_code.",
         family="agentic",
     ),
 }

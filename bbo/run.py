@@ -189,6 +189,15 @@ def run_single_experiment(
     opro_openai_project: str | None = None,
     opro_openai_timeout_seconds: float = 30.0,
     opro_openai_max_retries: int = 3,
+    agent_timeout_seconds: float = 180.0,
+    agent_max_retries: int = 1,
+    agent_history_limit: int = 40,
+    agent_candidates_per_call: int = 4,
+    agent_model: str | None = None,
+    agent_provider: str | None = None,
+    agent_api_base: str | None = None,
+    agent_api_key_env: str | None = None,
+    agent_initial_random: int = 0,
 ) -> dict[str, Any]:
     resolved_task_kwargs = dict(task_kwargs or {})
     if surrogate_path is not None:
@@ -232,6 +241,20 @@ def run_single_experiment(
             "enable_explorer": pablo_enable_explorer,
             "enable_planner": pablo_enable_planner,
             "enable_worker": pablo_enable_worker,
+            "run_dir": run_dir,
+            "resume": resume,
+        }
+    elif algorithm_name in {"agentic_nanobot", "nanobot", "agentic_claude_code", "claude_code", "claude-code"}:
+        algorithm_kwargs = {
+            "timeout_seconds": agent_timeout_seconds,
+            "max_retries": agent_max_retries,
+            "history_limit": agent_history_limit,
+            "candidates_per_call": agent_candidates_per_call,
+            "model": agent_model,
+            "provider": agent_provider,
+            "api_base": agent_api_base,
+            "api_key_env": agent_api_key_env,
+            "initial_random": agent_initial_random,
             "run_dir": run_dir,
             "resume": resume,
         }
@@ -618,6 +641,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--opro-openai-project", default=None)
     parser.add_argument("--opro-openai-timeout-seconds", type=float, default=30.0)
     parser.add_argument("--opro-openai-max-retries", type=int, default=3)
+    parser.add_argument("--agent-timeout-seconds", type=float, default=180.0)
+    parser.add_argument("--agent-max-retries", type=int, default=1)
+    parser.add_argument("--agent-history-limit", type=int, default=40)
+    parser.add_argument("--agent-candidates-per-call", type=int, default=4)
+    parser.add_argument("--agent-model", default=None)
+    parser.add_argument("--agent-provider", default=None)
+    parser.add_argument("--agent-api-base", default=None)
+    parser.add_argument("--agent-api-key-env", default=None)
+    parser.add_argument("--agent-initial-random", type=int, default=0)
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--results-root", type=Path, default=DEFAULT_RESULTS_ROOT)
     parser.add_argument(
@@ -701,6 +733,15 @@ def main(argv: list[str] | None = None) -> int:
             opro_openai_project=args.opro_openai_project,
             opro_openai_timeout_seconds=args.opro_openai_timeout_seconds,
             opro_openai_max_retries=args.opro_openai_max_retries,
+            agent_timeout_seconds=args.agent_timeout_seconds,
+            agent_max_retries=args.agent_max_retries,
+            agent_history_limit=args.agent_history_limit,
+            agent_candidates_per_call=args.agent_candidates_per_call,
+            agent_model=args.agent_model,
+            agent_provider=args.agent_provider,
+            agent_api_base=args.agent_api_base,
+            agent_api_key_env=args.agent_api_key_env,
+            agent_initial_random=args.agent_initial_random,
         )
 
     print(json.dumps(summary, indent=2, sort_keys=True))

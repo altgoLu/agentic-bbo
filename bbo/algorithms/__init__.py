@@ -1,6 +1,6 @@
 """Algorithm packages and registry."""
 
-from .agentic import PabloAlgorithm
+from .agentic import ClaudeCodeBboAlgorithm, GeneralAgentBboAlgorithm, NanobotBboAlgorithm, PabloAlgorithm
 from .llm_based import (
     HeuristicLlamboBackend,
     HeuristicOproBackend,
@@ -18,6 +18,8 @@ from .traditional import PyCmaAlgorithm, RandomSearchAlgorithm
 __all__ = [
     "ALGORITHM_REGISTRY",
     "AlgorithmSpec",
+    "ClaudeCodeBboAlgorithm",
+    "GeneralAgentBboAlgorithm",
     "HeuristicLlamboBackend",
     "HeuristicOproBackend",
     "LlamboAlgorithm",
@@ -27,6 +29,7 @@ __all__ = [
     "OptunaTpeAlgorithm",
     "OproAlgorithm",
     "OproBackend",
+    "NanobotBboAlgorithm",
     "PabloAlgorithm",
     "Pfns4BoAlgorithm",
     "PyCmaAlgorithm",
